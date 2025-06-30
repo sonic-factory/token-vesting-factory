@@ -7,23 +7,23 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./LiquidityLocker.sol";
+
+import "./TokenVesting.sol";
 
 /**
- * @notice This is a factory for creating LiquidityLocker contracts.
+ * @notice This is a factory for creating TokenVesting contracts.
  * @dev Proxy implementation are Clones. Implementation is immutable and not upgradeable.
  */
-contract LiquidityLockerFactory is Ownable, Pausable, ReentrancyGuard {
+contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @notice Information of each locker
     struct LockerInfo {
         address lockerAddress;
-        address asset;
         address creator;
-        uint256 unlockTime;
+        uint64 startTimestamp;
+        uint64 durationSeconds;
         uint256 lockerId;
-        uint256 createdAt;
     }
 
     /// @notice The address of the locker implementation contract.
@@ -40,18 +40,16 @@ contract LiquidityLockerFactory is Ownable, Pausable, ReentrancyGuard {
     mapping(uint256 lockerId => address lockerAddress) internal IdToAddress;
     /// @notice Mapping from creator address to their locker addresses.
     mapping(address creator => address[] lockers) internal creatorToLockers;
-    /// @notice Mapping from asset address to locker addresses.
-    mapping(address asset => address[] lockers) internal assetToLockers;
     /// @notice Mapping from locker address to its registry information.
     mapping(address locker => LockerInfo info) internal lockerInfo;
 
     /// @notice Emitted when a new locker is created.
     event LockerCreated(
-        uint256 indexed lockerId,
         address indexed locker, 
-        address indexed owner,
-        address asset, 
-        uint256 unlockTime
+        address indexed creator,
+        uint64 startTimestamp,
+        uint64 durationSeconds,
+        uint256 indexed lockerId
     );
     /// @notice Emitted when the treasury address is updated.
     event TreasuryUpdated(address treasury);
@@ -93,41 +91,37 @@ contract LiquidityLockerFactory is Ownable, Pausable, ReentrancyGuard {
     receive() external payable {}
 
     /**
-     * @notice This function is called to create a new liquidity locker
-     * @param _asset The address of the ERC20 token to lock
-     * @param _unlockTime The timestamp when the locker can be unlocked
+     * @notice This function is called to create a new token vesting contract (locker).
+     * @param _startTimestamp The timestamp when the vesting starts.
+     * @param _durationSeconds The duration in seconds for which the tokens will be vested.
     */
     function createLocker(
-        address _asset,
-        uint256 _unlockTime
-    ) external payable whenNotPaused nonReentrant returns (address locker) {
-        require(_asset != address(0), ZeroAddress());
-        require(msg.value == creationFee, IncorrectFee());
+        uint64 _startTimestamp,
+        uint64 _durationSeconds
+    ) external payable whenNotPaused nonReentrant returns (address payable locker) {
 
         lockerCounter = lockerCounter + 1;
 
         locker = Clones.clone(lockerImplementation);
 
-        LiquidityLocker(locker).initialize(
-            _asset,
-            _unlockTime,
-            msg.sender
+        TokenVesting(locker).initialize(
+            msg.sender,
+            _startTimestamp,
+            _durationSeconds
         );
 
         IdToAddress[lockerCounter] = locker;
         creatorToLockers[msg.sender].push(locker);
-        assetToLockers[_asset].push(locker);
 
         lockerInfo[locker] = LockerInfo({
             lockerAddress: locker,
-            asset: _asset,
             creator: msg.sender,
-            unlockTime: _unlockTime,
-            lockerId: lockerCounter,
-            createdAt: block.timestamp
+            startTimestamp: _startTimestamp,
+            durationSeconds: _durationSeconds,
+            lockerId: lockerCounter
         });
 
-        emit LockerCreated(lockerCounter, locker, msg.sender, _asset, _unlockTime);
+        emit LockerCreated(locker, msg.sender, _startTimestamp, _durationSeconds, lockerCounter);
     }
 
     /// @notice This function sets the treasury address.
@@ -149,7 +143,7 @@ contract LiquidityLockerFactory is Ownable, Pausable, ReentrancyGuard {
     /// @notice This function allows the owner to collect the contract balance.
     function collectFees() external onlyOwner {
         (bool success, ) = treasury.call{value: address(this).balance}("");
-        require(success, "LockerFactory: Failed to send Ether");
+        require(success, "Failed to send Ether");
     }
 
     /// @notice This function allows the owner to collect foreign tokens sent to the contract.
@@ -183,12 +177,6 @@ contract LiquidityLockerFactory is Ownable, Pausable, ReentrancyGuard {
     /// @param creator The address of the creator to retrieve lockers for.
     function getLockersByCreator(address creator) external view returns (address[] memory) {
         return creatorToLockers[creator];
-    }
-
-    /// @notice Get all lockers for a specific asset.
-    /// @param asset The address of the asset to retrieve lockers for.
-    function getLockersByAsset(address asset) external view returns (address[] memory) {
-        return assetToLockers[asset];
     }
 
     /// @notice Get the locker information by its address.

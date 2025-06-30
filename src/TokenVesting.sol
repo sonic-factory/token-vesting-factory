@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/finance/VestingWalletUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
@@ -13,7 +12,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * @notice @inheritdoc VestingWalletUpgradeable
  * 
  */
-contract TokenVesting is Initializable, VestingWalletUpgradeable {
+contract TokenVesting is Initializable, ReentrancyGuardUpgradeable, VestingWalletUpgradeable {
     using SafeERC20 for IERC20;
 
     /// @notice Thrown when the address is zero.
@@ -38,21 +37,21 @@ contract TokenVesting is Initializable, VestingWalletUpgradeable {
     }
 
     /// @notice Initializes the contract with the given token address and unlock time.
-    /// @param _asset The address of the ERC20 token to be locked in this vault.
-    /// @param _unlockTime The timestamp when withdrawals will be allowed.
-    /// @param _owner The address that will own the vault and be able to deposit.
+    /// @param _beneficiary The address of the beneficiary who will receive the vested tokens.
+    /// @param _startTimestamp The timestamp when the vesting starts.
+    /// @param _durationSeconds The duration in seconds for which the tokens will be vested.
     function initialize(
         address _beneficiary,
         uint64 _startTimestamp,
         uint64 _durationSeconds
     )
-        public 
+        public
+        override 
         initializer
-        nonZeroAddress(_asset)
+        nonZeroAddress(_beneficiary)
         nonZeroAmount(_startTimestamp)
         nonZeroAmount(_durationSeconds)
     {
-
         __VestingWallet_init(_beneficiary, _startTimestamp, _durationSeconds);
         __ReentrancyGuard_init();
     }

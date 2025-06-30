@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 
-import "../src/LiquidityLockerFactory.sol";
-import "../src/LiquidityLocker.sol";
+import "../src/TokenVestingFactory.sol";
+import "../src/TokenVesting.sol";
 
 contract Deploy is Script {
 
@@ -21,17 +21,17 @@ contract Deploy is Script {
         
         vm.startBroadcast();
 
-        LiquidityLocker lockerImplementation = new LiquidityLocker();
+        TokenVesting lockerImplementation = new TokenVesting();
 
-        LiquidityLockerFactory factory = new LiquidityLockerFactory(
+        TokenVestingFactory factory = new TokenVestingFactory(
             address(lockerImplementation),
             _treasury,
             _owner,
             10e18 // 10 S
         );
 
-        console.log("Locker Implementation deployed at: ", address(lockerImplementation));
-        console.log("Locker Factory deployed at: ", address(factory));
+        console.log("Token Vesting Implementation deployed at: ", address(lockerImplementation));
+        console.log("Token Vesting Factory deployed at: ", address(factory));
 
         vm.stopBroadcast();
     }
