@@ -102,7 +102,7 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
 
         lockerCounter = lockerCounter + 1;
 
-        locker = Clones.clone(lockerImplementation);
+        locker = payable(Clones.clone(lockerImplementation));
 
         TokenVesting(locker).initialize(
             msg.sender,
