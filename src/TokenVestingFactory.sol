@@ -88,6 +88,7 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
         _pause();
     }
 
+    /// @notice This function allows the contract to receive Ether.
     receive() external payable {}
 
     /**

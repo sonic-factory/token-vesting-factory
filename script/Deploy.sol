@@ -11,24 +11,27 @@ contract Deploy is Script {
 
     // Command line input
     // forge script script/Deploy.sol \
-    // --sig "run(address,address)" \
-    // $INITIAL_OWNER $INITIAL_OWNER \
     // --rpc-url $TESTNET_RPC_URL \ 
     // --etherscan-api-key $SONICSCAN_API_KEY \
     // --verify -vvvv --slow --broadcast --interactives 1
 
-    function run(address _treasury, address _owner) external {
+    function run() external {
         
         vm.startBroadcast();
+
+        address TREASURY = vm.envAddress("TREASURY");
+        address OWNER = vm.envAddress("OWNER");
 
         TokenVesting lockerImplementation = new TokenVesting();
 
         TokenVestingFactory factory = new TokenVestingFactory(
             address(lockerImplementation),
-            _treasury,
-            _owner,
+            TREASURY,
+            OWNER,
             10e18 // 10 S
         );
+
+        factory.unpause();
 
         console.log("Token Vesting Implementation deployed at: ", address(lockerImplementation));
         console.log("Token Vesting Factory deployed at: ", address(factory));

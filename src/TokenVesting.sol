@@ -48,4 +48,18 @@ contract TokenVesting is Initializable, ReentrancyGuardUpgradeable, VestingWalle
         __VestingWallet_init(_beneficiary, _startTimestamp, _durationSeconds);
         __ReentrancyGuard_init();
     }
+
+    /// @notice Release the vested ethers to the beneficiary.
+    function release() public override nonReentrant onlyOwner {
+        /// @dev Calls the release function from the VestingWalletUpgradeable contract
+        super.release();
+    }
+
+    /// @notice Release the vest ERC20 tokens to the beneficiary.
+    /// @param _token The address of the ERC20 token to be released.
+    function release(address _token) public override nonReentrant onlyOwner nonZeroAddress(_token) {
+        /// @dev Calls the release function from the VestingWalletUpgradeable contract
+        super.release(_token);
+    }
+
 }
