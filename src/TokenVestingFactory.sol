@@ -58,8 +58,14 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
 
     /// @notice Thrown when the address set is zero
     error ZeroAddress();
+    /// @notice Thrown when the amount set is zero
+    error ZeroAmount();
     /// @notice Thrown when the payable amount is zero
-    error IncorrectFee();
+    error InvalidFee();
+    /// @notice Thrown when the address is invalid
+    error InvalidAddress();
+    /// @notice Thrown when the start timestamp is not in the future
+    error InvalidTimestamp();
 
     /**
      * @notice Constructor arguments for the locker factory.
@@ -95,11 +101,18 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
      * @notice This function is called to create a new token vesting contract (locker).
      * @param _startTimestamp The timestamp when the vesting starts.
      * @param _durationSeconds The duration in seconds for which the tokens will be vested.
+     * @param _isNative A boolean indicating if the locker is for native tokens.
+     * @param _token The address of the token to be vested (if not native).
+     * @param _amount The amount of tokens to be vested. 
     */
     function createLocker(
         uint64 _startTimestamp,
-        uint64 _durationSeconds
+        uint64 _durationSeconds,
+        bool _isNative,
+        address _token,
+        uint256 _amount
     ) external payable whenNotPaused nonReentrant returns (address payable locker) {
+        require(_startTimestamp > block.timestamp, InvalidTimestamp());
 
         lockerCounter = lockerCounter + 1;
 
@@ -121,6 +134,26 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
             durationSeconds: _durationSeconds,
             lockerId: lockerCounter
         });
+
+        if (_isNative == true) {
+            // Transfer ETH to the locker if it is native.
+            require(msg.value >= (creationFee + _amount), InvalidFee());
+            (bool success, ) = locker.call{value: (creationFee + _amount)}("");
+            require(success, "Failed to send Ether");
+
+            // Refund excess ETH if any.
+            uint256 excessNative = msg.value - (creationFee + _amount);
+            if (excessNative > 0) {
+                (bool excessSuccess, ) = msg.sender.call{value: excessNative}("");
+                require(excessSuccess, "Failed to refund excess Ether");
+            }
+        } else {
+            // Transfer tokens to the locker if not native.
+            require(_token != address(0), InvalidAddress());
+            require(_amount > 0, ZeroAmount());
+
+            IERC20(_token).safeTransferFrom(msg.sender, locker, _amount);
+        }
 
         emit LockerCreated(locker, msg.sender, _startTimestamp, _durationSeconds, lockerCounter);
     }
