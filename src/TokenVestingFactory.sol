@@ -113,6 +113,7 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
         uint256 _amount
     ) external payable whenNotPaused nonReentrant returns (address payable locker) {
         require(_startTimestamp > block.timestamp, InvalidTimestamp());
+        require(msg.value >= creationFee, InvalidFee());
 
         lockerCounter = lockerCounter + 1;
 
@@ -138,7 +139,7 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
         if (_isNative == true) {
             // Transfer ETH to the locker if it is native.
             require(msg.value >= (creationFee + _amount), InvalidFee());
-            (bool success, ) = locker.call{value: (creationFee + _amount)}("");
+            (bool success, ) = locker.call{value: _amount}("");
             require(success, "Failed to send Ether");
 
             // Refund excess ETH if any.
