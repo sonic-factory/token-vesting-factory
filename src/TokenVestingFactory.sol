@@ -60,7 +60,7 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
     error ZeroAddress();
     /// @notice Thrown when the amount set is zero
     error ZeroAmount();
-    /// @notice Thrown when the payable amount is zero
+    /// @notice Thrown when the payable amount is invalid
     error InvalidFee();
     /// @notice Thrown when the address is invalid
     error InvalidAddress();
