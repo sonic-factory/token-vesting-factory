@@ -62,6 +62,43 @@ contract TokenVestingTest is Common {
     }     
 
     function test_setTreasury() public {
-        
-    } 
+        address newTreasury = makeAddr("newTreasury");
+
+        vm.prank(owner);
+        factory.setTreasury(newTreasury);
+
+        assertEq(factory.treasury(), newTreasury, "Treasury should be updated");
+    }
+
+    function test_setCreationFee() public {
+        uint256 newFee = 2e18; // 2 ETH
+
+        vm.prank(owner);
+        factory.setCreationFee(newFee);
+
+        assertEq(factory.creationFee(), newFee, "Creation fee should be updated");
+    }
+
+    function test_collectFees() public {
+        test_createLocker_isNotNative(); // Create a locker to collect fees
+
+        vm.prank(owner);
+        factory.collectFees();
+
+        uint256 treasuryBalance = address(factory.treasury()).balance;
+        assertEq(treasuryBalance, 1e18, "Treasury should collect the creation fee");
+    }
+
+    function test_collectTokens() public {
+        token.mint(address(factory), 10e18); // Mint tokens to the factory
+
+        vm.prank(owner);
+        factory.collectTokens(address(token));
+
+        uint256 treasuryBalance = token.balanceOf(factory.treasury());
+        assertEq(treasuryBalance, 10e18, "Treasury should collect the tokens");
+    }
+
+    
+
 }

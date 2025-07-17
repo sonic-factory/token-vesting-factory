@@ -154,6 +154,13 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
             require(_amount > 0, ZeroAmount());
 
             IERC20(_token).safeTransferFrom(msg.sender, locker, _amount);
+
+            // Refund excess ETH if any.
+            uint256 excessNative = msg.value - creationFee;
+            if (excessNative > 0) {
+                (bool excessSuccess, ) = msg.sender.call{value: excessNative}("");
+                require(excessSuccess, "Failed to refund excess Ether");
+            }
         }
 
         emit LockerCreated(locker, msg.sender, _startTimestamp, _durationSeconds, lockerCounter);
@@ -177,6 +184,9 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
 
     /// @notice This function allows the owner to collect the contract balance.
     function collectFees() external onlyOwner {
+        require(treasury != address(0), ZeroAddress());
+        require(address(this).balance > 0, ZeroAmount());
+
         (bool success, ) = treasury.call{value: address(this).balance}("");
         require(success, "Failed to send Ether");
     }
@@ -184,6 +194,9 @@ contract TokenVestingFactory is Ownable, Pausable, ReentrancyGuard {
     /// @notice This function allows the owner to collect foreign tokens sent to the contract.
     /// @param token The address of the token to collect.
     function collectTokens(address token) external onlyOwner {
+        require(token != address(0), ZeroAddress());
+        require(IERC20(token).balanceOf(address(this)) > 0, ZeroAmount());
+
         IERC20(token).safeTransfer(treasury, IERC20(token).balanceOf(address(this)));
     }
 
