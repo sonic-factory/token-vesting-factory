@@ -12,6 +12,9 @@ contract TokenVesting is Initializable, ReentrancyGuardUpgradeable, VestingWalle
     error ZeroAddress();
     /// @notice Thrown when the amount is zero.
     error ZeroAmount();
+    /// @notice Thrown when tokens are not vested.
+    error NotVested();
+    
 
     /// @notice Modifier to ensure that the amount is not zero.
     modifier nonZeroAmount(uint256 amount) {
@@ -51,6 +54,7 @@ contract TokenVesting is Initializable, ReentrancyGuardUpgradeable, VestingWalle
 
     /// @notice Release the vested ethers to the beneficiary.
     function release() public override nonReentrant onlyOwner {
+        require(releasable() > 0, NotVested());
         /// @dev Calls the release function from the VestingWalletUpgradeable contract
         super.release();
     }
@@ -58,6 +62,7 @@ contract TokenVesting is Initializable, ReentrancyGuardUpgradeable, VestingWalle
     /// @notice Release the vest ERC20 tokens to the beneficiary.
     /// @param _token The address of the ERC20 token to be released.
     function release(address _token) public override nonReentrant onlyOwner nonZeroAddress(_token) {
+        require(releasable(_token) > 0, NotVested());
         /// @dev Calls the release function from the VestingWalletUpgradeable contract
         super.release(_token);
     }

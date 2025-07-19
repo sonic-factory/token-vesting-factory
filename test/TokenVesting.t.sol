@@ -61,6 +61,28 @@ contract TokenVestingTest is Common {
         assertEq(token.balanceOf(address(locker)), 1e18, "Locker should hold 1 token");
     }     
 
+    function test_release_native() public {
+        TokenVesting locker = test_createLocker_isNative(); // Create a locker first
+        vm.warp(locker.start() + locker.duration() + 1 days); // Move time forward to release
+
+        vm.prank(user);
+        locker.release(); // Release the vested ETH
+
+        uint256 userBalance = address(user).balance;
+        assertEq(userBalance, (10e18 - factory.creationFee()), "User should receive the vested ETH");
+    }
+
+    function test_release_erc20() public {
+        TokenVesting locker = test_createLocker_isNotNative(); // Create a locker first
+        vm.warp(locker.start() + locker.duration() + 1 days); // Move time forward to release
+
+        vm.prank(user);
+        locker.release(address(token)); // Release the vested tokens
+
+        uint256 userBalance = token.balanceOf(user);
+        assertEq(userBalance, 10e18, "User should receive the vested tokens");
+    }
+
     function test_setTreasury() public {
         address newTreasury = makeAddr("newTreasury");
 
